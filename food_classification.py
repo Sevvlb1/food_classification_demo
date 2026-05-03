@@ -11,195 +11,64 @@ from torchvision import transforms
 from torch.optim.lr_scheduler import StepLR
 
 
-IMG_DIR   = r"C:\Users\sevvl\Desktop\turkish_food_dataset_\all_images"
-LABEL_DIR = r"C:\Users\sevvl\Desktop\turkish_food_dataset_\labels"
+IMG_DIR   = r"C:\Users\sevvl\Desktop\turkish_food_dataset_\all_images_new"
+LABEL_DIR = r"C:\Users\sevvl\Desktop\turkish_food_dataset_\labels22"
 
-NUM_CLASSES = 116
 BATCH_SIZE  = 2
 EPOCHS      = 10
 IMG_SIZE    = 416
-LR          = 0.005
+LR          = 0.001
 
 CONF_THRESHOLD = 0.35
+#testte threshold 0.2 dene
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 FOOD_MAP = {
-    0:   "adanakebap",
-    1:   "armut",
-    2:   "asure",
-    3:   "ayran",
-    4:   "baklava",
-    5:   "bamya",
-    6:   "beyazpeynir",
-    7:   "beyazekmek",
-    8:   "beyti",
-    9:   "bezelye",
-    10:  "brokoli",
-    11:  "browni",
-    12:  "bulgur",
-    13:  "cheesecake",
-    14:  "cikolatabitter",
-    15:  "cikolatasutlu",
-    16:  "cigkofte",
-    17:  "cilek",
-    18:  "cornflex",
-    19:  "dolma",
-    20:  "domates",
-    21:  "donat",
-    22:  "dondurma",
-    23:  "ekler",
-    24:  "elma",         
-    25:  "enginar",
-    26:  "etsote",
-    27:  "ezogelin",         
-    28:  "fanta",             
-    29:  "firindatavuk",        
-    30:  "gozleme",
-    31:  "halkatatli",        
-    32:  "hamburger",         
-    33:  "hamsi",        
-    34:  "helva",
-    35:  "humus",
-    36:  "hunkarbegendi",
-    37:  "icelatte",
-    38:  "iclikofte",
-    39:  "iskender",
-    40:  "ispanak",
-    41:  "kabak",
-    42:  "kadayif",
-    43:  "karnabahar",
-    44:  "karniyarik",
-    45:  "karpuz",
-    46:  "kek",
-    47:  "kemalpasa",
-    48:  "kofte",
-    49:  "kola",
-    50:  "krep",
-    51:  "kumpir",
-    52:  "kumru",
-    53:  "kunefe",
-    54:  "kurabiye",
-    55:  "kurufasulye",
-    56:  "kuruyemis",
-    57:  "lahmacun",
-    58:  "lazanya",
-    59:  "limonata",
-    60:  "makarna",
-    61:  "mandalina",
-    62:  "mantarsote",
-    63:  "biber",
-    64:  "cay",
-    65:  "zeytin",
-    66:  "yogurt",
-    67:  "tursu",
-    68:  "pilav",
-    69:  "marul",
-    70:  "limon",
-    71:  "sarma",
-    72:  "patates",
-    73:  "salatalik",
-    74:  "ketcap",
-    75:  "salata",
-    76:  "recel",
-    77:  "mayonez",
-    78:  "pirzola",
-    79:  "pide",
-    80:  "manti",
-    81:  "menemen",
-    82:  "mercimekcorba",
-    83:  "meyvesuyu",
-    84:  "muz",
-    85:  "nohut",
-    86:  "tahilliekmek",
-    87:  "omlet",
-    88:  "pankek",
-    89:  "turkkahvesi",
-    90:  "pastirma",
-    91:  "pizza",
-    92:  "pogaca",
-    93:  "portakal",
-    94:  "sebzegraten",
-    95:  "sigaraborek",
-    96:  "simit",
-    97:  "sinitzel",
-    98:  "somon",
-    99:  "sucuk",
-    100: "sulukofte",
-    101: "sut",
-    102: "sutlac",
-    103: "tantuni",
-    104: "tavukdoner",
-    105: "tavuksote",
-    106: "tavuksuyucorba",
-    107: "tazefasulye",
-    108: "tiremisu",
-    109: "trilece",
-    110: "urfa",
-    111: "waffle",
-    112: "yaglama",
-    113: "yulaf",
-    114: "yumurtahaslanmis"
-    
+    0: "baklagil",
+    1: "ekmek",
+    2: "pilav",
+    3: "kirmizi et",
+    4: "salata",
+    5: "balik",
+    6: "patates",
+    7: "tavuk",
+    8: "sebze",
+    9: "makarna",
+    10: "corba",
+    11: "zeytinyagli", 
+    12: "yumurta",
+    13: "yogurt",
+    14: "meyve",
+    15: "manti",
+    16: "pide",
+    17: "fastfood",
+    18: "lahmacun",
+    19: "tatli"
 }
+NUM_CLASSES = len(FOOD_MAP) + 1
 
 
 BASE_KCAL = {
-    "adanakebap":250, "armut":57, "asure":120, "ayran":37, "baklava":430,
-    "bamya":33, "beyazpeynir":264, "beyazekmek":265, "beyti":220, "bezelye":81,
-    "brokoli":34, "browni":466, "bulgur":83, "cheesecake":321, "cikolatabitter":546,
-    "cikolatasutlu":535, "cigkofte":180, "cilek":32, "cornflex":357, "dolma":150,
-    "domates":18, "donat":452, "dondurma":207, "ekler":262, "elma":52,
-    "enginar":47, "etsote":200, "ezogelin":80, "fanta":41, "firindatavuk":239,
-    "gozleme":250, "halkatatli":300, "hamburger":295, "hamsi":210, "helva":516,
-    "humus":166, "hunkarbegendi":180, "icelatte":60, "iclikofte":250, "iskender":220,
-    "ispanak":23, "kabak":17, "kadayif":350, "karnabahar":25, "karniyarik":200,
-    "karpuz":30, "kek":350, "kemalpasa":280, "kofte":250, "kola":42,
-    "krep":227, "kumpir":150, "kumru":300, "kunefe":430, "kurabiye":500,
-    "kurufasulye":127, "kuruyemis":600, "lahmacun":250, "lazanya":132, "limonata":40,
-    "makarna":131, "mandalina":53, "mantarsote":90, "biber":31, "cay":1,
-    "zeytin":115, "yogurt":59, "tursu":11, "pilav":130, "marul":15,
-    "limon":29, "sarma":180, "patates":77, "salatalik":16, "ketcap":112,
-    "salata":33, "recel":278, "mayonez":680, "pirzola":294, "pide":275,
-    "manti":200, "menemen":150, "mercimekcorba":60, "meyvesuyu":45, "muz":89,
-    "nohut":164, "tahilliekmek":247, "omlet":154, "pankek":227, "turkkahvesi":2,
-    "pastirma":250, "pizza":266, "pogaca":320, "portakal":47, "sebzegraten":120,
-    "sigaraborek":300, "simit":275, "sinitzel":250, "somon":208, "sucuk":450,
-    "sulukofte":180, "sut":42, "sutlac":111, "tantuni":220, "tavukdoner":215,
-    "tavuksote":180, "tavuksuyucorba":50, "tazefasulye":35, "tiremisu":240, "trilece":270,
-    "urfa":260, "waffle":291, "yaglama":250, "yulaf":389, "yumurtahaslanmis":155
+    "baklagil":250, "ekmek":57, "pilav":120, "kirmizi et":37, "salata":430,
+    "balik":250, "patates":57, "tavuk":120, "sebze":37, "makarna": 150,
+    "corba": 100, "zeytinyagli": 100, "yumurta": 150, "yogurt": 40,
+    "meyve": 70, "manti": 100, "fastfood": 500, "lahmacun": 150, "tatli": 250
+
 }
 
 PORTION_G = {
-    "adanakebap":200, "armut":150, "asure":200, "ayran":250, "baklava":60,
-    "bamya":150, "beyazpeynir":50, "beyazekmek":50, "beyti":200, "bezelye":150,
-    "brokoli":150, "browni":60, "bulgur":200, "cheesecake":120, "cikolatabitter":40,
-    "cikolatasutlu":40, "cigkofte":100, "cilek":150, "cornflex":40, "dolma":150,
-    "domates":100, "donat":70, "dondurma":100, "ekler":80, "elma":180,
-    "enginar":200, "etsote":200, "ezogelin":250, "fanta":330, "firindatavuk":200,
-    "gozleme":200, "halkatatli":150, "hamburger":200, "hamsi":150, "helva":100,
-    "humus":100, "hunkarbegendi":250, "icelatte":300, "iclikofte":150, "iskender":300,
-    "ispanak":150, "kabak":150, "kadayif":150, "karnabahar":150, "karniyarik":250,
-    "karpuz":300, "kek":80, "kemalpasa":100, "kofte":150, "kola":330,
-    "krep":100, "kumpir":300, "kumru":200, "kunefe":150, "kurabiye":50,
-    "kurufasulye":250, "kuruyemis":30, "lahmacun":150, "lazanya":250, "limonata":300,
-    "makarna":200, "mandalina":100, "mantarsote":150, "biber":100, "cay":200,
-    "zeytin":30, "yogurt":150, "tursu":50, "pilav":200, "marul":100,
-    "limon":60, "sarma":150, "patates":150, "salatalik":100, "ketcap":20,
-    "salata":150, "recel":20, "mayonez":20, "pirzola":200, "pide":250,
-    "manti":250, "menemen":200, "mercimekcorba":250, "meyvesuyu":200, "muz":120,
-    "nohut":200, "tahilliekmek":50, "omlet":120, "pankek":100, "turkkahvesi":60,
-    "pastirma":30, "pizza":200, "pogaca":80, "portakal":180, "sebzegraten":200,
-    "sigaraborek":100, "simit":120, "sinitzel":150, "somon":150, "sucuk":50,
-    "sulukofte":250, "sut":200, "sutlac":200, "tantuni":200, "tavukdoner":200,
-    "tavuksote":200, "tavuksuyucorba":250, "tazefasulye":200, "tiremisu":120, "trilece":150,
-    "urfa":200, "waffle":150, "yaglama":100, "yulaf":60, "yumurtahaslanmis":60
+    "baklagil":200, "ekmek":150, "pilav":200, "kirmizi et":250, "salata":60,
+    "balik":250, "patates":57, "tavuk":120, "sebze":37, "makarna": 150,
+    "corba": 100, "zeytinyagli": 100, "yumurta": 150, "yogurt": 40,
+    "meyve": 70, "manti": 100, "fastfood": 500, "lahmacun": 150, "tatli": 250
+
 }
+
 
 DEFAULT_KCAL    = 200
 DEFAULT_PORTION = 150
-
 
 
 def estimate_calories(yolo_class_id, box, img_size=416):
@@ -307,8 +176,12 @@ class FoodDataset(Dataset):
                 boxes.append([x1, y1, x2, y2])
                 labels.append(int(cls) + 1)  # 0 = background
 
+        '''if len(boxes) == 0:
+            return self.__getitem__((idx + 1) % len(self.images))'''
+
         if len(boxes) == 0:
-            return self.__getitem__((idx + 1) % len(self.images))
+            return None
+        
 
         boxes   = torch.as_tensor(boxes,  dtype=torch.float32)
         labels  = torch.as_tensor(labels, dtype=torch.int64)
