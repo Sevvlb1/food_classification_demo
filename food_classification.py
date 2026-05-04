@@ -15,12 +15,13 @@ IMG_DIR   = r"C:\Users\sevvl\Desktop\turkish_food_dataset_\all_images_new"
 LABEL_DIR = r"C:\Users\sevvl\Desktop\turkish_food_dataset_\labels22"
 
 BATCH_SIZE  = 2
-EPOCHS      = 10
+EPOCHS      = 7
 IMG_SIZE    = 416
 LR          = 0.001
 
-CONF_THRESHOLD = 0.35
-#testte threshold 0.2 dene
+'''CONF_THRESHOLD = 0.35
+'''#testte threshold 0.2 dene
+CONF_THRESHOLD = 0.30
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -115,7 +116,11 @@ class FoodDataset(Dataset):
     def __init__(self, img_dir, label_dir):
         self.img_dir   = img_dir
         self.label_dir = label_dir
-        self.tf        = transforms.ToTensor()
+        self.tf = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ToTensor()
+        ])
 
         all_images = os.listdir(img_dir)
         self.images = []
@@ -274,6 +279,9 @@ def load_model():
     return model
 
 
+
+import torchvision.ops as ops
+
 def predict(model, img_path, threshold=CONF_THRESHOLD):
     img = imread(img_path)
     if img is None:
@@ -287,9 +295,16 @@ def predict(model, img_path, threshold=CONF_THRESHOLD):
     with torch.no_grad():
         output = model([tensor])[0]
 
-    boxes  = output["boxes"].cpu().numpy()
-    labels = output["labels"].cpu().numpy()
-    scores = output["scores"].cpu().numpy()
+    boxes  = output["boxes"]
+    labels = output["labels"]
+    scores = output["scores"]
+
+    # NMS uygula (ÖNCE!)
+    keep = ops.nms(boxes, scores, 0.5)
+
+    boxes  = boxes[keep].cpu().numpy()
+    labels = labels[keep].cpu().numpy()
+    scores = scores[keep].cpu().numpy()
 
     print(f"\nTotal raw predictions: {len(boxes)}")
     if len(scores):
