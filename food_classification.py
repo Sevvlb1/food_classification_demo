@@ -51,24 +51,99 @@ FOOD_MAP = {
 NUM_CLASSES = len(FOOD_MAP) + 1
 
 
-BASE_KCAL = {
+
+import requests
+
+API_KEY = "WsTZaCKNfS2y6stoS2Ydx52yfpWVoPMWABrnF1VZ"
+
+kcal_cache = {}
+
+def get_kcal(food_name):
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+
+    params = {
+        "query": food_name,
+        "api_key": API_KEY,
+        "pageSize": 1
+    }
+
+    r = requests.get(url, params=params, timeout=3)
+    data = r.json()
+
+    try:
+        food = data["foods"][0]
+        nutrients = food["foodNutrients"]
+
+        for n in nutrients:
+            if "Energy" in n["nutrientName"]:
+                return n["value"]
+
+    except:
+        return None
+    
+DEFAULT_KCAL = 150
+
+
+
+def safe_kcal(food_name):
+    if food_name in kcal_cache:
+        return kcal_cache[food_name]
+
+    try:
+        kcal = get_kcal(food_name)
+    except:
+        kcal = None
+
+    if kcal is None:
+        kcal = DEFAULT_KCAL
+
+    kcal_cache[food_name] = kcal
+    return kcal
+
+
+API_MAP = {
+    "baklagil": "lentils",
+    "ekmek": "bread",
+    "pilav": "rice cooked",
+    "kirmizi et": "beef cooked",
+    "salata": "green salad",
+    "balik": "grilled fish",
+    "patates": "boiled potato",
+    "tavuk": "chicken breast cooked",
+    "sebze": "mixed vegetables",
+    "makarna": "pasta cooked",
+    "corba": "soup",
+    "zeytinyagli": "vegetable with olive oil",
+    "yumurta": "boiled egg",
+    "yogurt": "plain yogurt",
+    "meyve": "fresh fruit",
+    "manti": "dumplings",
+    "pide": "flatbread",
+    "fastfood": "hamburger",
+    "lahmacun": "turkish pizza",
+    "tatli": "dessert"
+
+}
+
+'''BASE_KCAL = {
     "baklagil":250, "ekmek":57, "pilav":120, "kirmizi et":37, "salata":430,
     "balik":250, "patates":57, "tavuk":120, "sebze":37, "makarna": 150,
     "corba": 100, "zeytinyagli": 100, "yumurta": 150, "yogurt": 40,
-    "meyve": 70, "manti": 100, "fastfood": 500, "lahmacun": 150, "tatli": 250
+    "meyve": 70, "manti": 100, "pide": 150, fastfood": 500, "lahmacun": 150, "tatli": 250
 
 }
-
+'''
 PORTION_G = {
-    "baklagil":200, "ekmek":150, "pilav":200, "kirmizi et":250, "salata":60,
-    "balik":250, "patates":57, "tavuk":120, "sebze":37, "makarna": 150,
-    "corba": 100, "zeytinyagli": 100, "yumurta": 150, "yogurt": 40,
-    "meyve": 70, "manti": 100, "fastfood": 500, "lahmacun": 150, "tatli": 250
+    "baklagil": 91, "ekmek": 40, "pilav": 170, "kirmizi et": 150, "salata": 300,
+    "balik": 200, "patates": 80, "tavuk": 250, "sebze": 100, "makarna": 90,
+    "corba": 150, "zeytinyagli": 150, "yumurta": 50, "yogurt": 160,
+    "meyve": 120, "manti": 100, "pide":170, "fastfood": 190, "lahmacun": 150, "tatli": 160
 
 }
 
 
-DEFAULT_KCAL    = 200
+'''DEFAULT_KCAL    = 200
+'''
 DEFAULT_PORTION = 150
 
 
@@ -79,7 +154,8 @@ def estimate_calories(yolo_class_id, box, img_size=416):
         print(f"  WARNING: yolo_class_id {yolo_class_id} not in FOOD_MAP — using defaults")
         food_name = f"unknown_{yolo_class_id}"
 
-    kcal_per_100g = BASE_KCAL.get(food_name, DEFAULT_KCAL)
+    query_name = API_MAP.get(food_name, food_name)
+    kcal_per_100g = safe_kcal(query_name)
     portion_g     = PORTION_G.get(food_name, DEFAULT_PORTION)
 
     x1, y1, x2, y2 = box
@@ -259,8 +335,8 @@ def train():
         loss_history.append(avg)
         print(f"Epoch {epoch:>2}/{EPOCHS} | Total: {total_loss:.4f} | Avg: {avg:.4f}")
 
-    torch.save(model.state_dict(), "model.pth")
-    print("Model saved → model.pth")
+    torch.save(model.state_dict(), "model3.pth")
+    print("Model saved → model3.pth")
 
     plt.figure(figsize=(7, 4))
     plt.plot(range(1, EPOCHS + 1), loss_history, marker="o", color="steelblue")
@@ -273,7 +349,7 @@ def train():
 
 def load_model():
     model = get_model(NUM_CLASSES)
-    model.load_state_dict(torch.load("model.pth", map_location=device))
+    model.load_state_dict(torch.load("model3.pth", map_location=device))
     model.to(device)
     model.eval()
     return model
